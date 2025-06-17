@@ -32,7 +32,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         val providerPackageName = "com.google.android.apps.healthdata"
         val availabilityStatus = HealthConnectClient.getSdkStatus(this, providerPackageName)
         if (availabilityStatus == HealthConnectClient.SDK_UNAVAILABLE) {

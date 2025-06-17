@@ -1,10 +1,12 @@
 package com.example.bienestar_emocional
 
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.widget.Button
 import android.widget.TextView
+import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.text
@@ -12,7 +14,7 @@ import com.example.bienestar_emocional.R
 
 // Importa tu R generado
 
-class PermissionsRationaleActivity : AppCompatActivity() {
+class PermissionsRationaleActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +31,8 @@ class PermissionsRationaleActivity : AppCompatActivity() {
 
 
         buttonDone.setOnClickListener {
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
             finish() // Simplemente cierra esta actividad de justificación
         }
 
@@ -50,7 +54,7 @@ class PermissionsRationaleActivity : AppCompatActivity() {
                 <li><b>Frecuencia Cardíaca:</b> Para analizar tus zonas de entrenamiento durante el ejercicio y ofrecerte información sobre tu salud cardiovascular.</li>
                 <li><b>Sueño:</b> Para ayudarte a entender tus patrones de sueño y mejorar tu descanso.</li>
                 </ul>
-            <p><b>Tu privacidad es importante para nosotros.</b> Tus datos de salud se utilizan únicamente para proporcionarte estas funciones dentro de la aplicación y se manejan de acuerdo con nuestra <a href="https://www.tusitioweb.com/politica-de-privacidad">Política de Privacidad</a>.</p>
+            <p><b>Tu privacidad es importante para nosotros.</b> Tus datos de salud se utilizan únicamente para proporcionarte estas funciones dentro de la aplicación y se manejan de acuerdo con nuestra <a href="https://policies.google.com/privacy?hl=es">Política de Privacidad</a>.</p>
             <p>Puedes gestionar estos permisos en cualquier momento desde la configuración de Health Connect o la configuración de permisos de tu dispositivo.</p>
         """.trimIndent().let {
             android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_LEGACY)
