@@ -1,8 +1,10 @@
 package com.example.bienestar_emocional
 
+import android.content.ContentValues.TAG
 import android.content.Intent
 import android.os.Bundle
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.minus
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
@@ -24,9 +27,13 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.lifecycle.lifecycleScope
 import com.example.bienestar_emocional.ui.theme.BienestaremocionalTheme
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,13 +60,14 @@ class MainActivity : ComponentActivity() {
         if (availabilityStatus == HealthConnectClient.SDK_AVAILABLE) {
             Toast.makeText(this, "Health Connect está listo.", Toast.LENGTH_SHORT).show()
         }
-        val healthConnectClient = HealthConnectClient.getOrCreate(this)
 
+        val healthConnectClient = HealthConnectClient.getOrCreate(this)
+        
         // Create a set of permissions for required data types
         lifecycleScope.launch {
             checkPermissionsAndRun(healthConnectClient)
         }
-
+        
     }
 
     val PERMISSIONS =
@@ -80,6 +88,8 @@ class MainActivity : ComponentActivity() {
         if (granted.containsAll(PERMISSIONS)) {
             // Permissions successfully granted
             Toast.makeText(this, "Health Connect permiso concedido", Toast.LENGTH_SHORT).show()
+
+
         } else {
             // Lack of required permissions
         }
@@ -89,13 +99,43 @@ class MainActivity : ComponentActivity() {
         val granted = healthConnectClient.permissionController.getGrantedPermissions()
         if (granted.containsAll(PERMISSIONS)) {
             // Permissions already granted; proceed with inserting or reading data
+            lifecycleScope.launch {
+                ReadData(healthConnectClient)
+            }
+
         } else {
             requestPermissions.launch(PERMISSIONS)
         }
 
     }
+    
+
+    suspend fun ReadData(healthConnectClient: HealthConnectClient) {
+        val endTime = Instant.now()
+        val startTime = endTime.minus(1, ChronoUnit.DAYS)
+        try {
+
+            if (healthConnectClient.permissionController.getGrantedPermissions().contains(HealthPermission.getReadPermission(StepsRecord::class))) {
+                val stepsRequest = ReadRecordsRequest(
+                    recordType = StepsRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
+                val stepsResponse = healthConnectClient.readRecords(stepsRequest)
+                for (record in stepsResponse.records) {
+                    // Procesa cada registro de pasos
+                    Toast.makeText(this, "Pasos: ${record.count}, Inicio: ${record.startTime}, Fin: ${record.endTime}", Toast.LENGTH_SHORT).show()
+                    // Enviar 'record' a tu endpoint
+                }
+            }
+            Log.i(TAG, "Lectura de datos de Health Connect completada")
+        }catch (e: Exception){
+            Log.e(TAG, "Error al leer los datos de Health Connect", e)
+        }
+    }
 
 }
+
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
