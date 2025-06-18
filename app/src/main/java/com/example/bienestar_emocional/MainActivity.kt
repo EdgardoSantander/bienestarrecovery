@@ -128,6 +128,7 @@ class MainActivity : ComponentActivity() {
                     // Enviar 'record' a tu endpoint
                 }
             }
+
             Log.i(TAG, "Lectura de datos de Health Connect completada")
         }catch (e: Exception){
             Log.e(TAG, "Error al leer los datos de Health Connect", e)
