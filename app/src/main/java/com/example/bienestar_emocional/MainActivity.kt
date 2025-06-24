@@ -33,6 +33,8 @@ import androidx.lifecycle.lifecycleScope
 import com.example.bienestar_emocional.ui.theme.BienestaremocionalTheme
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 class MainActivity : ComponentActivity() {
@@ -111,7 +113,8 @@ class MainActivity : ComponentActivity() {
     
 
     suspend fun ReadData(healthConnectClient: HealthConnectClient) {
-        val endTime = Instant.now()
+        val zoneid = ZoneId.systemDefault()
+        val endTime = LocalDate.now(zoneid).atStartOfDay(zoneid).toInstant()
         val startTime = endTime.minus(1, ChronoUnit.DAYS)
         try {
 
@@ -125,6 +128,34 @@ class MainActivity : ComponentActivity() {
                 for (record in stepsResponse.records) {
                     // Procesa cada registro de pasos
                     Toast.makeText(this, "Pasos: ${record.count}, Inicio: ${record.startTime}, Fin: ${record.endTime}", Toast.LENGTH_SHORT).show()
+                    // Enviar 'record' a tu endpoint
+                }
+            }
+
+            if (healthConnectClient.permissionController.getGrantedPermissions().contains(HealthPermission.getReadPermission(HeartRateRecord::class))) {
+                val heartRateRequest = ReadRecordsRequest(
+                    recordType = HeartRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
+                val heartRateResponse = healthConnectClient.readRecords(heartRateRequest)
+                for (latidos in heartRateResponse.records) {
+                    // Procesa cada registro de corazon
+                    Toast.makeText(this, "Pasos: ${latidos.samples.map { it.beatsPerMinute }.average()}, Inicio: ${latidos.startTime}, Fin: ${latidos.endTime}", Toast.LENGTH_SHORT).show()
+                    // Enviar 'record' a tu endpoint
+                }
+            }
+
+            if (healthConnectClient.permissionController.getGrantedPermissions().contains(HealthPermission.getReadPermission(BloodPressureRecord::class))) {
+                val bloodPressureRateRequest = ReadRecordsRequest(
+                    recordType = BloodPressureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
+                val bloodPressureResponse = healthConnectClient.readRecords(bloodPressureRateRequest)
+                for (presion in bloodPressureResponse.records) {
+                    // Procesa cada registro de sangre
+                    Toast.makeText(this, "Pasos: ${presion.systolic}, Inicio: ${presion.time}, Fin: ${presion.diastolic}", Toast.LENGTH_SHORT).show()
                     // Enviar 'record' a tu endpoint
                 }
             }
