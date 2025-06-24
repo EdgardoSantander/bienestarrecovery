@@ -3,25 +3,18 @@ package com.example.bienestar_emocional
 import android.content.ContentValues.TAG
 import android.content.Intent
 import android.os.Bundle
-import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.minus
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodPressureRecord
-import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
@@ -33,11 +26,12 @@ import androidx.lifecycle.lifecycleScope
 import com.example.bienestar_emocional.ui.theme.BienestaremocionalTheme
 import kotlinx.coroutines.launch
 import java.time.Duration
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import kotlin.time.Duration.Companion.hours
+import androidx.core.net.toUri
+import androidx.health.connect.client.units.millimetersOfMercury
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +48,7 @@ class MainActivity : ComponentActivity() {
             this.startActivity(
                 Intent(Intent.ACTION_VIEW).apply {
                     setPackage("com.android.vending")
-                    data = Uri.parse(uriString)
+                    data = uriString.toUri()  // aqui puede que exista una fallita
                     putExtra("overlay", true)
                     putExtra("callerId", this.`package`) // Aqui puede existir un posible error a futuro
                 }
@@ -74,7 +68,7 @@ class MainActivity : ComponentActivity() {
         
     }
 
-    val PERMISSIONS =
+    private val permissions =
         setOf(
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getReadPermission(StepsRecord::class),
@@ -86,10 +80,10 @@ class MainActivity : ComponentActivity() {
 
     // Issue operations with healthConnectClient
     // Create the permissions launcher
-    val requestPermissionActivityContract = PermissionController.createRequestPermissionResultContract()
+    private val requestPermissionActivityContract = PermissionController.createRequestPermissionResultContract()
 
-    val requestPermissions = registerForActivityResult(requestPermissionActivityContract) { granted ->
-        if (granted.containsAll(PERMISSIONS)) {
+    private val requestPermissions = registerForActivityResult(requestPermissionActivityContract) { granted ->
+        if (granted.containsAll(permissions)) {
             // Permissions successfully granted
             Toast.makeText(this, "Health Connect permiso concedido", Toast.LENGTH_SHORT).show()
 
@@ -99,22 +93,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    suspend fun checkPermissionsAndRun(healthConnectClient: HealthConnectClient) {
+    private suspend fun checkPermissionsAndRun(healthConnectClient: HealthConnectClient) {
         val granted = healthConnectClient.permissionController.getGrantedPermissions()
-        if (granted.containsAll(PERMISSIONS)) {
+        if (granted.containsAll(permissions)) {
             // Permissions already granted; proceed with inserting or reading data
             lifecycleScope.launch {
-                ReadData(healthConnectClient)
+                readData(healthConnectClient)
             }
 
         } else {
-            requestPermissions.launch(PERMISSIONS)
+            requestPermissions.launch(permissions)
         }
 
     }
     
 
-    suspend fun ReadData(healthConnectClient: HealthConnectClient) {
+    private suspend fun readData(healthConnectClient: HealthConnectClient) {
         val zoneid = ZoneId.systemDefault()
         val endTime = LocalDate.now(zoneid).atStartOfDay(zoneid).toInstant()
         val startTime = endTime.minus(1, ChronoUnit.DAYS)
@@ -126,13 +120,19 @@ class MainActivity : ComponentActivity() {
                     recordType = StepsRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
+
                 val stepsResponse = healthConnectClient.readRecords(stepsRequest)
-                for (record in stepsResponse.records) {
-                    // Procesa cada registro de pasos
-                    Toast.makeText(this, "Pasos: ${record.count}, Inicio: ${record.startTime}, Fin: ${record.endTime}", Toast.LENGTH_SHORT).show()
-                    // Enviar 'record' a tu endpoint
+                if (stepsResponse.records.isNotEmpty()){
+                    for(record in stepsResponse.records) {
+                        // Procesa cada registro de pasos
+                        Toast.makeText(this, "Pasos: ${record.count}, Inicio: ${record.startTime}, Fin: ${record.endTime}", Toast.LENGTH_SHORT).show()
+                        // Enviar 'record' a tu endpoint
+                        Log.i(TAG, "Total de pasos: ${record.count}")
+                    }
+                }else{
+                    Log.i(TAG, "No hay datos pasos en Health Connect")
                 }
+
             }
             //Frecuencia cardiaca
             if (healthConnectClient.permissionController.getGrantedPermissions().contains(HealthPermission.getReadPermission(HeartRateRecord::class))) {
@@ -140,27 +140,38 @@ class MainActivity : ComponentActivity() {
                     recordType = HeartRateRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
                 val heartRateResponse = healthConnectClient.readRecords(heartRateRequest)
-                for (latidos in heartRateResponse.records) {
-                    // Procesa cada registro de corazon
-                    Toast.makeText(this, "Pasos: ${latidos.samples.map { it.beatsPerMinute }.average()}, Inicio: ${latidos.startTime}, Fin: ${latidos.endTime}", Toast.LENGTH_SHORT).show()
-                    // Enviar 'record' a tu endpoint
+                if (heartRateResponse.records.isNotEmpty()){
+                    for(latidos in heartRateResponse.records) {
+
+                        Toast.makeText(this, "Pasos: ${latidos.samples.map { it.beatsPerMinute }.average()}, Inicio: ${latidos.startTime}, Fin: ${latidos.endTime}", Toast.LENGTH_SHORT).show()
+
+                    }
+                }else{
+                    Log.i(TAG, "No hay datos frecuencia cardiaca en Health Connect")
                 }
+
             }
+
             //Presion arterial
             if (healthConnectClient.permissionController.getGrantedPermissions().contains(HealthPermission.getReadPermission(BloodPressureRecord::class))) {
                 val bloodPressureRateRequest = ReadRecordsRequest(
                     recordType = BloodPressureRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
+
                 val bloodPressureResponse = healthConnectClient.readRecords(bloodPressureRateRequest)
-                for (presion in bloodPressureResponse.records) {
-                    // Procesa cada registro de sangre
-                    Toast.makeText(this, "Pasos: ${presion.systolic}, Inicio: ${presion.time}, Fin: ${presion.diastolic}", Toast.LENGTH_SHORT).show()
-                    // Enviar 'record' a tu endpoint
+                if (bloodPressureResponse.records.isNotEmpty()){
+                    for (presion in bloodPressureResponse.records) {
+                        // Procesa cada registro de sangre
+                        Toast.makeText(this, "Pasos: ${presion.systolic}, Inicio: ${presion.time}, Fin: ${presion.diastolic}", Toast.LENGTH_SHORT).show()
+                        // Enviar 'record' a tu endpoint
+
+                    }
+                }else{
+                    Log.i(TAG, "No hay datos presión arterial en Health Connect")
                 }
+
             }
             //Sueño
             if (healthConnectClient.permissionController.getGrantedPermissions().contains(HealthPermission.getReadPermission(SleepSessionRecord::class))) {
@@ -168,13 +179,21 @@ class MainActivity : ComponentActivity() {
                     recordType = SleepSessionRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
+
                 val sleepResponse = healthConnectClient.readRecords(sleepRequest)
-                for (dormidito in sleepResponse.records) {
-                    // Procesa los niveles de sue;o en este caso vamos a recuperar el rem y el profundo que es el deep
-                    Toast.makeText(this, "Pasos: ${dormidito.stages.filter { hora -> hora.stage == SleepSessionRecord.STAGE_TYPE_REM }}, ${dormidito.stages.filter{hora -> hora.stage == SleepSessionRecord.STAGE_TYPE_DEEP}}, Inicio: ${dormidito.startTime}, Fin: ${dormidito.endTime}", Toast.LENGTH_SHORT).show()
-                    // Enviar 'record' a tu endpoint
+                if (sleepResponse.records.isNotEmpty()){
+                    for (dormidito in sleepResponse.records) {
+                        // Procesa los niveles de sue;o en este caso vamos a recuperar el rem y el profundo que es el deep
+                        val duracionSueño = Duration.between(dormidito.startTime, dormidito.endTime).toMinutes()
+                        val tipoSueno = dormidito.stages.map { stage -> stage.stage == SleepSessionRecord.STAGE_TYPE_SLEEPING }
+                        Toast.makeText(this, "timpo dormido: $duracionSueño , Inicio: ${dormidito.startTime}, Fin: ${dormidito.endTime}", Toast.LENGTH_SHORT).show()
+                        // Enviar 'record' a tu endpoint
+                        Log.i(TAG, " Total de sueño en minutos: $duracionSueño horas")
+                    }
+                }else{
+                    Log.i(TAG, "No hay datos sueño en Health Connect")
                 }
+
             }
             //Ejercicio
             if (healthConnectClient.permissionController.getGrantedPermissions().contains(HealthPermission.getReadPermission(ExerciseSessionRecord::class))) {
@@ -182,15 +201,20 @@ class MainActivity : ComponentActivity() {
                     recordType = ExerciseSessionRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
-                val exerciseResponse = healthConnectClient.readRecords(exerciseRequest)
-                for (ejercicio in exerciseResponse.records) {
-                    // Procesa cada registro de ejercicio, opcional se puede utilizar el metodo de route para extraer una lista con coordenadas de putos de gps que se recorrieron durante la sesion
-                    val duracionEjercicio = Duration.between(ejercicio.startTime, ejercicio.endTime)
 
-                    Toast.makeText(this, "Pasos: ${ejercicio.exerciseType}, Inicio: ${ejercicio.startTime}, Fin: ${ejercicio.endTime}, Total: ${duracionEjercicio.toHours()}", Toast.LENGTH_SHORT).show()
-                    // Enviar 'record' a tu endpoint
+                val exerciseResponse = healthConnectClient.readRecords(exerciseRequest)
+                if (exerciseResponse.records.isNotEmpty()){
+                    for (ejercicio in exerciseResponse.records) {
+                        // Procesa cada registro de ejercicio, opcional se puede utilizar el metodo de route para extraer una lista con coordenadas de putos de gps que se recorrieron durante la sesion
+                        val duracionEjercicio = Duration.between(ejercicio.startTime, ejercicio.endTime)
+
+                        Toast.makeText(this, "Pasos: ${ejercicio.exerciseType}, Inicio: ${ejercicio.startTime}, Fin: ${ejercicio.endTime}, Total: ${duracionEjercicio.toHours()}", Toast.LENGTH_SHORT).show()
+                        // Enviar 'record' a tu endpoint
+                    }
+                }else{
+                    Log.i(TAG, "No hay datos ejercicio en Health Connect")
                 }
+
             }
             //Ritmo cardíaco
             if (healthConnectClient.permissionController.getGrantedPermissions().contains(HealthPermission.getReadPermission(RestingHeartRateRecord::class))) {
@@ -198,12 +222,17 @@ class MainActivity : ComponentActivity() {
                     recordType = RestingHeartRateRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                Toast.makeText(this, "Leyendo datos de Health Connect", Toast.LENGTH_SHORT).show()
+
                 val restingHeartRateResponse = healthConnectClient.readRecords(restingHeartRateRequest)
-                for (restHeart in restingHeartRateResponse.records) {
-                    Toast.makeText(this, "Pasos: ${restHeart.beatsPerMinute}, Inicio: ${restHeart.time} , Fin: , Total: ", Toast.LENGTH_SHORT).show()
-                    // Enviar 'record' a tu endpoint
+                if (restingHeartRateResponse.records.isNotEmpty()){
+                    for (restHeart in restingHeartRateResponse.records) {
+                        Toast.makeText(this, "Pasos: ${restHeart.beatsPerMinute}, Inicio: ${restHeart.time} , Fin: , Total: ", Toast.LENGTH_SHORT).show()
+                        // Enviar 'record' a tu endpoint
+                    }
+                }else{
+                    Log.i(TAG, "No hay datos ritmo cardiaco en Health Connect")
                 }
+
             }
 
 
