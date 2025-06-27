@@ -42,6 +42,8 @@ android {
 dependencies {
     // agregamos la dependencia de health connect
     implementation("androidx.health.connect:connect-client:1.1.0-rc02")
+    // agregamos dependencia para http
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

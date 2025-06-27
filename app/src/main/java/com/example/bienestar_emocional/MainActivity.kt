@@ -36,6 +36,7 @@ import java.time.temporal.ChronoUnit
 import androidx.core.net.toUri
 
 import androidx.health.connect.client.records.metadata.Metadata
+import com.example.bienestar_emocional.ui.theme.EnvioNetwork
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -162,7 +163,7 @@ class MainActivity : ComponentActivity() {
                     recordType = StepsRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                val jsonPasos = JSONObject()
+
                 val stepsResponse = healthConnectClient.readRecords(stepsRequest)
                 if (stepsResponse.records.isNotEmpty()){
                     for(record in stepsResponse.records) {
@@ -170,13 +171,13 @@ class MainActivity : ComponentActivity() {
                         //Toast.makeText(this, "Pasos: ${record.count}, Inicio: ${record.startTime}, Fin: ${record.endTime}", Toast.LENGTH_SHORT).show()
                         // Enviar 'record' a tu endpoint
                         Log.i(TAG, "Total de pasos: ${record.count}")
-                        jsonPasos.put("pasos", record.count)
-                        jsonBienestarEmocional.put("pasosTotales", jsonPasos)
+
+                        jsonBienestarEmocional.put("pasosTotales", record.count)
                     }
                 }else{
                     Log.i(TAG, "No hay datos pasos en Health Connect")
-                    jsonPasos.put("pasos", "")
-                    jsonBienestarEmocional.put("pasosTotales", jsonPasos)
+
+                    jsonBienestarEmocional.put("pasosTotales", 0)
                 }
 
             }
@@ -186,7 +187,7 @@ class MainActivity : ComponentActivity() {
                     recordType = HeartRateRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                val jsonFreCardiaca = JSONObject()
+
                 val heartRateResponse = healthConnectClient.readRecords(heartRateRequest)
 
                 if (heartRateResponse.records.isNotEmpty()) {
@@ -197,13 +198,13 @@ class MainActivity : ComponentActivity() {
 
                     }
                     val latido = heartRateResponse.records.map { record -> record.samples.map { it.beatsPerMinute }.average() }
-                    jsonFreCardiaca.put("latidosPM",latido.average())
-                    jsonBienestarEmocional.put("frecuenciaCardiaca", jsonFreCardiaca)
+
+                    jsonBienestarEmocional.put("frecuenciaCardiaca", latido.average())
 
                 }else{
                     Log.i(TAG, "No hay datos frecuencia cardiaca en Health Connect")
-                    jsonFreCardiaca.put("latidosPM", "")
-                    jsonBienestarEmocional.put("frecuenciaCardiaca", jsonFreCardiaca)
+
+                    jsonBienestarEmocional.put("frecuenciaCardiaca", 0)
                 }
 
 
@@ -217,7 +218,7 @@ class MainActivity : ComponentActivity() {
                     recordType = BloodPressureRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                val jsonPresionArterial = JSONObject()
+
                 val bloodPressureResponse = healthConnectClient.readRecords(bloodPressureRateRequest)
                 if (bloodPressureResponse.records.isNotEmpty()){
                     for (presion in bloodPressureResponse.records) {
@@ -228,14 +229,14 @@ class MainActivity : ComponentActivity() {
                     }
                     val presionSys = bloodPressureResponse.records.map{ record -> record.systolic.inMillimetersOfMercury }
                     val presionDia = bloodPressureResponse.records.map { record -> record.diastolic.inMillimetersOfMercury }
-                    jsonPresionArterial.put("presionArterialSystolica", presionSys)
-                    jsonPresionArterial.put("presionArterialDiastolica", presionDia)
-                    jsonBienestarEmocional.put("presionArterial", jsonPresionArterial)
+
+                    jsonBienestarEmocional.put("presionArterialSys", presionSys.average())
+                    jsonBienestarEmocional.put("presionArterialDia", presionDia.average())
+
                 }else{
                     Log.i(TAG, "No hay datos presión arterial en Health Connect")
-                    jsonPresionArterial.put("presionArterialSystolica", "")
-                    jsonPresionArterial.put("presionArterialDiastolica", "")
-                    jsonBienestarEmocional.put("presionArterial", jsonPresionArterial)
+                    jsonBienestarEmocional.put("presionArterialSys", 0)
+                    jsonBienestarEmocional.put("presionArterialDia", 0)
                 }
 
             }
@@ -245,14 +246,13 @@ class MainActivity : ComponentActivity() {
                     recordType = SleepSessionRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                val jsonSuenio = JSONObject()
+
                 val sleepResponse = healthConnectClient.readRecords(sleepRequest)
                 if (sleepResponse.records.isNotEmpty()){
                     for (dormidito in sleepResponse.records) {
                         // Procesa los niveles de sue;o en este caso vamos a recuperar el rem y el profundo que es el deep
                         val duracionSuenio = Duration.between(dormidito.startTime, dormidito.endTime).toMinutes()
-                        jsonSuenio.put("suenioMin", duracionSuenio)
-                        jsonBienestarEmocional.put("suenioCont", jsonSuenio)
+                        jsonBienestarEmocional.put("suenioCont", duracionSuenio)
                         //Toast.makeText(this, "timpo dormido: $duracionSueño , Inicio: ${dormidito.startTime}, Fin: ${dormidito.endTime}", Toast.LENGTH_SHORT).show()
                         // Enviar 'record' a tu endpoint
                         Log.i(TAG, "Total de sueño en minutos: $duracionSuenio")
@@ -261,8 +261,7 @@ class MainActivity : ComponentActivity() {
 
                 }else{
                     Log.i(TAG, "No hay datos sueño en Health Connect")
-                    jsonSuenio.put("suenioMin", "")
-                    jsonBienestarEmocional.put("suenioCont", jsonSuenio)
+                    jsonBienestarEmocional.put("suenioCont", 0)
                 }
 
             }
@@ -272,7 +271,7 @@ class MainActivity : ComponentActivity() {
                     recordType = ExerciseSessionRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                val jsonEjercicio = JSONObject()
+
                 val exerciseResponse = healthConnectClient.readRecords(exerciseRequest)
                 if (exerciseResponse.records.isNotEmpty()){
                     for (ejercicio in exerciseResponse.records) {
@@ -282,12 +281,11 @@ class MainActivity : ComponentActivity() {
 
                     }
                     val ejercicioTotal = exerciseResponse.records.map { record -> Duration.between(record.startTime, record.endTime).toMinutes() }
-                    jsonEjercicio.put("ejercicioMin", ejercicioTotal)
-                    jsonBienestarEmocional.put("ejercicioCont", jsonEjercicio)
+
+                    jsonBienestarEmocional.put("ejercicioCont", ejercicioTotal.average())
                 }else{
                     Log.i(TAG, "No hay datos ejercicio en Health Connect")
-                    jsonEjercicio.put("ejercicioMin", "")
-                    jsonBienestarEmocional.put("ejercicioCont", jsonEjercicio)
+                    jsonBienestarEmocional.put("ejercicioCont", 0)
                 }
 
             }
@@ -297,7 +295,7 @@ class MainActivity : ComponentActivity() {
                     recordType = RestingHeartRateRecord::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
-                val jsonRitmoCardiaca = JSONObject()
+
                 val restingHeartRateResponse = healthConnectClient.readRecords(restingHeartRateRequest)
                 if (restingHeartRateResponse.records.isNotEmpty()){
                     for (restHeart in restingHeartRateResponse.records) {
@@ -305,16 +303,33 @@ class MainActivity : ComponentActivity() {
                         // Enviar 'record' a tu endpoint
                     }
                     val ritmoCardiaca = restingHeartRateResponse.records.map { record -> record.beatsPerMinute }
-                    jsonRitmoCardiaca.put("ritmoCardiaca", ritmoCardiaca)
-                    jsonBienestarEmocional.put("ritmoCardiacaTotal", jsonRitmoCardiaca)
+
+                    jsonBienestarEmocional.put("ritmoCardiacaTotal", ritmoCardiaca.average())
                 }else{
                     Log.i(TAG, "No hay datos ritmo cardiaco en Health Connect")
-                    jsonRitmoCardiaca.put("ritmoCardiaca", "")
-                    jsonBienestarEmocional.put("ritmoCardiacaTotal", jsonRitmoCardiaca)
+
+                    jsonBienestarEmocional.put("ritmoCardiacaTotal", 0)
                 }
 
             }
-
+            // En tu archivo donde llamas a NetworkUtils
+            val MI_PC_IP = "192.168.100.17" // Ejemplo: "192.168.1.100" o "10.0.2.2" si el servidor Spring corre en el host del emulador
+            val MI_PC_PUERTO = 8080 // O el puerto en el que tu servidor Spring esté escuchando (comúnmente 8080)
+            val ENDPOINT_SPRING = "/bienestar-emocional/obtener" // El endpoint completo de tu @PostMapping
+            val envioNetwork = EnvioNetwork()
+            // ...
+            lifecycleScope.launch {
+                try {
+                    envioNetwork.enviarJsonAPc(
+                        jsonBienestarEmocional, // Tu JSONObject
+                        MI_PC_IP,
+                        MI_PC_PUERTO,
+                        ENDPOINT_SPRING
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error al intentar lanzar el envío de JSON a Spring", e)
+                }
+            }
             Log.i(TAG, "JSON Bienestar Emocional: $jsonBienestarEmocional")
 
             Log.i(TAG, "Lectura de datos de Health Connect completada")
